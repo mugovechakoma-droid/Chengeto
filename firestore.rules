@@ -1,0 +1,138 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: patients
+    // Fields:
+    //   - name: string (required, 1-100 chars)
+    //   - age: number (required, 0-120)
+    //   - gestationalAge: number (required, 0-50)
+    //   - riskScore: number (required, 0-100)
+    //   - riskLevel: string (required, ['low', 'medium', 'high'])
+    //   - status: string (required, ['active', 'referred', 'delivered'])
+    //   - lastVisit: string (ISO 8601)
+    //   - nextVisit: string (ISO 8601)
+    //   - location: string (max 200 chars)
+    //   - phone: string (max 20 chars)
+    //   - history: map (hivStatus, previousCSection, hypertension, diabetes)
+    //   - vitals: list (bp, hb, weight, fetalHeartRate)
+    //   - createdBy: string (required, UID)
+    //
+    // Collection: referrals
+    // Fields:
+    //   - patientId: string (required)
+    //   - fromClinic: string (required)
+    //   - toHospital: string (required)
+    //   - reason: string
+    //   - status: string (required, ['pending', 'dispatched', 'arrived', 'completed'])
+    //   - timestamp: string (ISO 8601)
+    //   - timeline: list
+    //   - createdBy: string (required, UID)
+    //
+    // ===============================================================
+
+    // Collection: users
+    // Fields:
+    //   - uid: string (required, matches document ID)
+    //   - email: string (required)
+    //   - displayName: string
+    //   - role: string (required, ['pcn', 'dmo', 'specialist', 'admin'])
+    //   - clinic: string
+    //   - createdAt: string (ISO 8601)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "mugovechakoma@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role']) &&
+             data.uid == request.auth.uid &&
+             isValidEmail(data.email) &&
+             data.role in ['pcn', 'dmo', 'specialist', 'admin'];
+    }
+
+    function isValidPatient(data) {
+      return data.keys().hasAll(['name', 'age', 'gestationalAge', 'riskScore', 'riskLevel', 'status', 'createdBy']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.age is number && data.age >= 0 && data.age <= 120 &&
+             data.gestationalAge is number && data.gestationalAge >= 0 && data.gestationalAge <= 50 &&
+             data.riskScore is number && data.riskScore >= 0 && data.riskScore <= 100 &&
+             data.riskLevel in ['low', 'medium', 'high'] &&
+             data.status in ['active', 'referred', 'delivered'] &&
+             data.createdBy == request.auth.uid;
+    }
+
+    function isValidReferral(data) {
+      return data.keys().hasAll(['patientId', 'fromClinic', 'toHospital', 'status', 'timestamp', 'createdBy']) &&
+             data.patientId is string &&
+             data.fromClinic is string && data.fromClinic.size() <= 200 &&
+             data.toHospital is string && data.toHospital.size() <= 200 &&
+             data.status in ['pending', 'dispatched', 'arrived', 'completed'] &&
+             isValidDateString(data.timestamp) &&
+             data.createdBy == request.auth.uid;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isAdmin() || (isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == resource.data.role);
+    }
+
+    match /patients/{patientId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidPatient(request.resource.data);
+      allow update: if isAuthenticated() && isValidPatient(request.resource.data) && 
+                    (isOwner(resource.data.createdBy) || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /referrals/{referralId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidReferral(request.resource.data);
+      allow update: if isAuthenticated() && isValidReferral(request.resource.data) && 
+                    (isOwner(resource.data.createdBy) || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // Default deny
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

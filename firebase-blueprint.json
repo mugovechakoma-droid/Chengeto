@@ -1,0 +1,98 @@
+{
+  "entities": {
+    "Patient": {
+      "title": "Patient",
+      "description": "A maternal health patient record.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Full name of the patient" },
+        "age": { "type": "number", "description": "Age in years" },
+        "gestationalAge": { "type": "number", "description": "Gestation in weeks" },
+        "riskScore": { "type": "number", "description": "Calculated risk score 0-100" },
+        "riskLevel": { "type": "string", "enum": ["low", "medium", "high"] },
+        "status": { "type": "string", "enum": ["active", "referred", "delivered"] },
+        "lastVisit": { "type": "string", "format": "date-time" },
+        "nextVisit": { "type": "string", "format": "date-time" },
+        "location": { "type": "string" },
+        "phone": { "type": "string" },
+        "history": {
+          "type": "object",
+          "properties": {
+            "hivStatus": { "type": "string", "enum": ["positive", "negative", "unknown"] },
+            "previousCSection": { "type": "boolean" },
+            "hypertension": { "type": "boolean" },
+            "diabetes": { "type": "boolean" }
+          }
+        },
+        "vitals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "bp": { "type": "string" },
+              "hb": { "type": "number" },
+              "weight": { "type": "number" },
+              "fetalHeartRate": { "type": "number" }
+            }
+          }
+        },
+        "createdBy": { "type": "string", "description": "UID of the user who created the record" }
+      },
+      "required": ["name", "age", "gestationalAge", "riskScore", "riskLevel", "status", "createdBy"]
+    },
+    "Referral": {
+      "title": "Referral",
+      "description": "A patient referral to a district hospital.",
+      "type": "object",
+      "properties": {
+        "patientId": { "type": "string" },
+        "fromClinic": { "type": "string" },
+        "toHospital": { "type": "string" },
+        "reason": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "dispatched", "arrived", "completed"] },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "timeline": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "status": { "type": "string" },
+              "timestamp": { "type": "string", "format": "date-time" },
+              "note": { "type": "string" }
+            }
+          }
+        },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["patientId", "fromClinic", "toHospital", "status", "timestamp", "createdBy"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "A user profile for healthcare workers.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["pcn", "dmo", "specialist", "admin"] },
+        "clinic": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    }
+  },
+  "firestore": {
+    "/patients/{patientId}": {
+      "schema": "Patient",
+      "description": "Collection of patient records"
+    },
+    "/referrals/{referralId}": {
+      "schema": "Referral",
+      "description": "Collection of referral records"
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Collection of user profiles"
+    }
+  }
+}

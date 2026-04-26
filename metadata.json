@@ -1,0 +1,7 @@
+{
+  "name": "Chengeto",
+  "description": "Protection Through Intelligent Maternal Care - A Mission Control for maternal health in rural Zimbabwe, featuring real-time risk assessment and seamless escalation workflows.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
