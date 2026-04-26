@@ -68,6 +68,7 @@ export default function ANCVisitForm({ isOpen, onClose, patient, onSubmit }: ANC
     retainedPlacenta: false,
     genitalTears: false,
     clottingDysfunction: false,
+    bloodSugar: '',
   });
 
   // Auto-save simulation
@@ -115,6 +116,7 @@ export default function ANCVisitForm({ isOpen, onClose, patient, onSubmit }: ANC
         retainedPlacenta: formData.retainedPlacenta,
         genitalTears: formData.genitalTears,
         clottingDysfunction: formData.clottingDysfunction,
+        bloodSugar: parseFloat(formData.bloodSugar || '0'),
         timestamp: new Date().toISOString(),
         gestationalAge: patient.gestationalAge // Simplified for demo
       });
@@ -224,13 +226,21 @@ export default function ANCVisitForm({ isOpen, onClose, patient, onSubmit }: ANC
                       className="h-12 rounded-xl border-slate-200 dark:border-slate-700"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs font-bold uppercase tracking-widest text-slate-400">Fetal Heart Rate (bpm)</Label>
                     <Input 
                       type="number"
                       placeholder="e.g. 140"
                       value={formData.fetalHeartRate}
                       onChange={e => setFormData({...formData, fetalHeartRate: e.target.value})}
+                      className="h-12 rounded-xl border-slate-200 dark:border-slate-700"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase tracking-widest text-slate-400">Blood Sugar (mmol/L)</Label>
+                    <Input 
+                      type="number"
+                      placeholder="e.g. 6.5"
+                      value={formData.bloodSugar}
+                      onChange={e => setFormData({...formData, bloodSugar: e.target.value})}
                       className="h-12 rounded-xl border-slate-200 dark:border-slate-700"
                     />
                   </div>
@@ -333,6 +343,10 @@ export default function ANCVisitForm({ isOpen, onClose, patient, onSubmit }: ANC
                       <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800">
                         <span className="text-slate-400 block text-[10px] uppercase font-bold">Hb</span>
                         <span className="font-bold">{formData.hb || 'N/A'} g/dL</span>
+                      </div>
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800">
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold">Blood Sugar</span>
+                        <span className="font-bold">{formData.bloodSugar || 'N/A'} mmol/L</span>
                       </div>
                     </div>
                   </div>

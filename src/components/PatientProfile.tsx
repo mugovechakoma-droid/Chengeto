@@ -199,11 +199,12 @@ export default function PatientProfile({ patient, isOpen, onClose, onNewANC, onR
               {/* Left Column (8/12) */}
               <div className="lg:col-span-8 space-y-12">
                 {/* Metrics */}
-                <div className="grid grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                   {[
                     { label: 'Risk Score', value: `${patient.riskScore}%`, color: patient.riskLevel === 'high' ? 'text-red-500' : 'text-blue-600' },
                     { label: 'Gestation', value: `${patient.gestationalAge} wks`, color: 'text-slate-900 dark:text-white' },
                     { label: 'Hb Level', value: `${latestVisit?.hb || '--'} g/dL`, color: 'text-slate-900 dark:text-white' },
+                    { label: 'Blood Sugar', value: `${latestVisit?.bloodSugar || '--'} mmol/L`, color: 'text-slate-900 dark:text-white' },
                     { label: 'EDD', value: patient.edd ? new Date(patient.edd).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'N/A', color: 'text-slate-900 dark:text-white' }
                   ].map((m, i) => (
                     <div key={i} className="mac-card p-6 bg-slate-50 dark:bg-white/5 border-none rounded-[32px]">
@@ -256,8 +257,8 @@ export default function PatientProfile({ patient, isOpen, onClose, onNewANC, onR
                                <p className="text-xl font-bold dark:text-white">{visit.temperature}°C</p>
                              </div>
                              <div className="space-y-1">
-                               <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Hb Level</p>
-                               <p className="text-xl font-bold dark:text-white">{visit.hb} g/dL</p>
+                               <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Hb / Sugar</p>
+                               <p className="text-xl font-bold dark:text-white">{visit.hb} <span className="text-xs font-normal opacity-50 ml-1">/ {visit.bloodSugar || '--'}</span></p>
                              </div>
                              <div className="space-y-1">
                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">FHR</p>

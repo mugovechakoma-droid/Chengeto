@@ -59,6 +59,7 @@ export interface Patient {
     polyhydramnios?: boolean;
     intraamnioticInfection?: boolean;
     cardiacDisease?: boolean;
+    bloodSugar?: number;
   };
   vitals: ANCVisit[];
   delivery?: DeliveryRecord;
@@ -110,6 +111,7 @@ export interface ANCVisit {
   retainedPlacenta?: boolean;
   genitalTears?: boolean;
   clottingDysfunction?: boolean;
+  bloodSugar?: number;
 }
 
 export interface Referral {

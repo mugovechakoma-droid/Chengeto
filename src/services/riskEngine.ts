@@ -24,6 +24,26 @@ export interface RiskAssessmentResult {
   clinicalRecommendations: string[];
 }
 
+export const predictMaternalRiskML = (vitals: {
+  age: number;
+  systolicBP: number;
+  diastolicBP: number;
+  bloodSugar: number;
+  bodyTemp: number;
+  heartRate: number;
+}): RiskLevel => {
+  const { age, systolicBP, diastolicBP, bloodSugar, bodyTemp, heartRate } = vitals;
+  
+  // High Risk Triggers based on notebook data distribution
+  if (bloodSugar >= 12 || systolicBP >= 160 || diastolicBP >= 110) return 'high';
+  if (age > 40 && (systolicBP >= 140 || bloodSugar >= 10)) return 'high';
+  
+  // Medium Risk Triggers
+  if (bloodSugar >= 7.8 || systolicBP >= 130 || diastolicBP >= 85 || age > 35) return 'medium';
+  
+  return 'low';
+};
+
 export const calculateMaternalRisk = (
   patientHistory: Patient['history'],
   currentVitals: Partial<ANCVisit> & { age: number; racialBackground?: string }
@@ -59,6 +79,19 @@ export const calculateMaternalRisk = (
     if (currentVitals.systolicBP >= 140 || currentVitals.diastolicBP >= 90) {
       clinicalRecommendations.push('Start Methyldopa (250mg TDS) as per EDLIZ. Monitor BP 4-hourly.');
       clinicalRecommendations.push('Test for Proteinuria/Dipstick to screen for Preeclampsia.');
+    }
+  }
+
+  // Blood Sugar (BS) - Integrated from Maternal Risk ML Notebook
+  if (currentVitals.bloodSugar !== undefined) {
+    if (currentVitals.bloodSugar >= 11.1) { // Random/Post-prandial threshold
+      triggerAlert = true;
+      dangerSigns.push(`Hyperglycemia: ${currentVitals.bloodSugar} mmol/L`);
+      clinicalRecommendations.push('Suspected Gestational Diabetes (GDM). Refer for OGTT and specialist review.');
+      score += 40;
+    } else if (currentVitals.bloodSugar >= 7.8) {
+      score += 20;
+      clinicalRecommendations.push('Elevated Blood Sugar. Monitor glucose levels and advise on low-glycemic diet.');
     }
   }
 
@@ -243,6 +276,20 @@ export const calculateMaternalRisk = (
   // but now benefits from more specific clinical triggers.
   
   if (triggerAlert) score = Math.max(score, 85);
+  
+  // Apply ML Prediction as a secondary validation
+  const mlRisk = predictMaternalRiskML({
+    age: currentVitals.age,
+    systolicBP: currentVitals.systolicBP || 0,
+    diastolicBP: currentVitals.diastolicBP || 0,
+    bloodSugar: currentVitals.bloodSugar || 0,
+    bodyTemp: currentVitals.temperature || 37,
+    heartRate: currentVitals.heartRate || 80
+  });
+
+  if (mlRisk === 'high') score = Math.max(score, 70);
+  if (mlRisk === 'medium') score = Math.max(score, 40);
+
   const finalScore = Math.min(score, 100);
 
   let riskLevel: 'low' | 'medium' | 'high' = 'low';
