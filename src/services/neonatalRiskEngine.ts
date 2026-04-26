@@ -6,6 +6,11 @@ export interface NeonatalRiskAssessment {
   sepsisProbability: number;
   dangerSigns: string[];
   recommendations: string[];
+  dischargeReadiness: {
+    isReady: boolean;
+    score: number; // 0-100
+    missingCriteria: string[];
+  };
 }
 
 export const calculateNeonatalSepsisRisk = (
@@ -98,11 +103,59 @@ export const calculateNeonatalSepsisRisk = (
     recommendations.push('MODERATE RISK: Review within 12-24 hours. Educate mother on danger signs.');
   }
 
+  // 5. Discharge Readiness Criteria
+  const missingCriteria: string[] = [];
+  if (visit.feedingStatus !== 'good') missingCriteria.push('Adequate Feeding');
+  if (visit.activityLevel !== 'active') missingCriteria.push('Stable Activity');
+  if (visit.temperature && (visit.temperature > 37.2 || visit.temperature < 36.5)) missingCriteria.push('Temperature Stability');
+  if (delivery.birthWeight < 2000) missingCriteria.push('Weight Threshold (2kg)');
+  if (finalScore > 20) missingCriteria.push('Risk Score < 20%');
+
+  const readinessScore = Math.max(0, 100 - (missingCriteria.length * 20) - (finalScore / 2));
+  const isReady = readinessScore >= 80 && missingCriteria.length === 0;
+
   return {
     riskScore: finalScore,
     riskLevel,
     sepsisProbability: finalSepsisProb,
     dangerSigns: Array.from(new Set(dangerSigns)),
-    recommendations: Array.from(new Set(recommendations))
+    recommendations: Array.from(new Set(recommendations)),
+    dischargeReadiness: {
+      isReady,
+      score: Math.round(readinessScore),
+      missingCriteria
+    }
   };
+};
+
+export const generateClinicalHandover = (
+  mother: Patient,
+  neonate: Neonate,
+  assessment: NeonatalRiskAssessment
+): string => {
+  const latestVisit = neonate.visits[neonate.visits.length - 1];
+  return `
+CLINICAL HANDOVER - ${neonate.name} (Mother: ${mother.name})
+-----------------------------------------------------------
+BIRTH DETAILS:
+- GA: ${neonate.gestationalAge} wks | BW: ${neonate.birthWeight}g
+- Mode: ${mother.delivery?.modeOfDelivery || 'N/A'}
+- Apgar: ${mother.delivery?.apgar1}/${mother.delivery?.apgar5}
+
+MATERNAL RISK FACTORS:
+- Risk Level: ${mother.riskLevel.toUpperCase()} (${mother.riskScore}%)
+- ROM: ${mother.delivery?.ruptureOfMembranes} hrs
+- Fever: ${mother.delivery?.maternalFever ? 'YES' : 'NO'}
+
+NEONATAL ASSESSMENT:
+- Sepsis Prob: ${assessment.sepsisProbability}%
+- Danger Signs: ${assessment.dangerSigns.join(', ') || 'NONE'}
+- Feeding: ${latestVisit?.feedingStatus || 'N/A'}
+- Activity: ${latestVisit?.activityLevel || 'N/A'}
+
+RECOMMENDATIONS:
+${assessment.recommendations.map(r => `- ${r}`).join('\n')}
+
+DISCHARGE STATUS: ${assessment.dischargeReadiness.isReady ? 'READY' : 'NOT READY'} (${assessment.dischargeReadiness.score}%)
+  `.trim();
 };

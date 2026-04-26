@@ -8,7 +8,11 @@ import {
   History,
   Stethoscope,
   ChevronRight,
-  ShieldAlert
+  ShieldAlert,
+  CheckCircle2,
+  Copy,
+  ExternalLink,
+  ClipboardCheck
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,7 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Neonate, NeonatalVisit, Patient } from '../types';
 import { cn } from '@/lib/utils';
-import { calculateNeonatalSepsisRisk } from '../services/neonatalRiskEngine';
+import { calculateNeonatalSepsisRisk, generateClinicalHandover } from '../services/neonatalRiskEngine';
 import { 
   LineChart, 
   Line, 
@@ -26,6 +30,7 @@ import {
   Tooltip, 
   ResponsiveContainer 
 } from 'recharts';
+import NeonatalPathway from './NeonatalPathway';
 
 const MOCK_VITALS = [
   { time: '12h', temp: 36.5, hr: 140 },
@@ -43,10 +48,18 @@ interface NeonatalDashboardProps {
 }
 
 export default function NeonatalDashboard({ mother, neonate, onNewVisit }: NeonatalDashboardProps) {
+  const [isPathwayOpen, setIsPathwayOpen] = React.useState(false);
   const latestVisit = neonate.visits[neonate.visits.length - 1];
   
   // Calculate dual risk score
   const riskAssessment = calculateNeonatalSepsisRisk(mother, mother.delivery!, latestVisit || {});
+
+  const handleCopyHandover = () => {
+    const note = generateClinicalHandover(mother, neonate, riskAssessment);
+    navigator.clipboard.writeText(note);
+    // You could add a toast here
+    alert('Clinical Handover Note copied to clipboard!');
+  };
 
   return (
     <div className="space-y-6">
@@ -153,34 +166,52 @@ export default function NeonatalDashboard({ mother, neonate, onNewVisit }: Neona
            </CardContent>
         </Card>
 
-        <Card className="rounded-3xl border-none shadow-xl bg-gradient-to-br from-blue-600 to-blue-700 text-white">
+            </CardContent>
+        </Card>
+
+        <Card className={cn(
+          "rounded-3xl border-none shadow-xl transition-all duration-500",
+          riskAssessment.dischargeReadiness.isReady 
+            ? "bg-emerald-600 text-white" 
+            : "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white"
+        )}>
            <CardHeader className="p-6 pb-2">
               <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-widest opacity-70">
-                <Wind className="w-4 h-4" />
-                Growth Tracking
+                <ClipboardCheck className="w-4 h-4" />
+                Discharge Readiness
               </CardTitle>
            </CardHeader>
-           <CardContent className="p-6 space-y-6">
+           <CardContent className="p-6 space-y-4">
               <div className="flex justify-between items-end">
-                 <div>
-                    <p className="text-[10px] font-bold uppercase opacity-60">Birth Weight</p>
-                    <p className="text-2xl font-black">3.2 <span className="text-xs font-medium opacity-60">kg</span></p>
-                 </div>
-                 <Badge className="bg-white/20 text-white border-none uppercase text-[8px]">CENTILE: 50th</Badge>
+                 <div className="text-4xl font-black">{riskAssessment.dischargeReadiness.score}%</div>
+                 <div className="text-[10px] font-bold uppercase opacity-60">Readiness Score</div>
               </div>
-              <div className="space-y-2">
-                 <div className="flex justify-between text-xs">
-                    <span className="opacity-70">Weight Gain (Daily)</span>
-                    <span className="font-bold">+25g</span>
-                 </div>
-                 <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden">
-                    <div className="h-full bg-white w-[75%]" />
-                 </div>
-              </div>
-              <div className="pt-2">
-                 <p className="text-[10px] font-bold uppercase opacity-60 mb-2">Length-for-Age</p>
-                 <p className="text-lg font-bold">49.5 <span className="text-xs font-medium opacity-60">cm</span></p>
-              </div>
+              <Progress 
+                value={riskAssessment.dischargeReadiness.score} 
+                className="h-1.5 bg-black/10 dark:bg-white/10" 
+                //@ts-ignore
+                indicatorClassName={riskAssessment.dischargeReadiness.isReady ? "bg-white" : "bg-blue-600"}
+              />
+              {!riskAssessment.dischargeReadiness.isReady && (
+                <div className="space-y-1">
+                   <p className="text-[10px] font-bold uppercase opacity-60">Missing Criteria:</p>
+                   <div className="flex flex-wrap gap-1">
+                      {riskAssessment.dischargeReadiness.missingCriteria.map(c => (
+                        <Badge key={c} variant="secondary" className="bg-black/5 dark:bg-white/5 border-none text-[8px] font-bold">
+                          {c}
+                        </Badge>
+                      ))}
+                   </div>
+                </div>
+              )}
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleCopyHandover}
+                className="w-full mt-2 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-[10px] font-bold uppercase tracking-widest gap-2"
+              >
+                <Copy className="w-3 h-3" /> Copy Clinical Handover
+              </Button>
            </CardContent>
         </Card>
       </div>
@@ -191,12 +222,22 @@ export default function NeonatalDashboard({ mother, neonate, onNewVisit }: Neona
            <div>
               <CardTitle className="text-lg font-bold flex items-center gap-2">
                 <Stethoscope className="w-5 h-5 text-blue-600" />
-                Early Neonatal Surveillance (Checklist)
+                Management Pathway (EDLIZ)
               </CardTitle>
            </div>
-           <Button variant="outline" size="sm" className="rounded-full h-8 px-4 font-bold text-[10px] uppercase tracking-widest" onClick={onNewVisit}>
-             New Screening
-           </Button>
+           <div className="flex gap-2">
+             <Button 
+               variant="ghost" 
+               size="sm" 
+               onClick={() => setIsPathwayOpen(true)}
+               className="rounded-full h-8 px-4 font-bold text-[10px] uppercase tracking-widest gap-2"
+             >
+               <ExternalLink className="w-3 h-3" /> Protocol Library
+             </Button>
+             <Button variant="outline" size="sm" className="rounded-full h-8 px-4 font-bold text-[10px] uppercase tracking-widest" onClick={onNewVisit}>
+               New Screening
+             </Button>
+           </div>
         </CardHeader>
         <CardContent className="p-0">
           <div className="divide-y divide-black/[0.03] dark:divide-white/[0.03]">
@@ -230,6 +271,12 @@ export default function NeonatalDashboard({ mother, neonate, onNewVisit }: Neona
           </div>
         </div>
       )}
+
+      <NeonatalPathway 
+        isOpen={isPathwayOpen} 
+        onClose={() => setIsPathwayOpen(false)} 
+        riskLevel={riskAssessment.riskLevel} 
+      />
     </div>
   );
 }
