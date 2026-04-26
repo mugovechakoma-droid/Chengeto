@@ -157,6 +157,85 @@ export const MOCK_PATIENTS: Patient[] = [
     ],
     createdBy: 'mock-user-1',
   },
+  {
+    id: '5',
+    name: 'Amai Kudzai',
+    age: 25,
+    gestationalAge: 26,
+    riskScore: 85,
+    riskLevel: 'high',
+    status: 'active',
+    lastVisit: '2024-03-20',
+    nextVisit: '2024-04-03',
+    location: 'Sanyati District',
+    phone: '+263 77 222 3333',
+    history: {
+      hivStatus: 'negative',
+      previousCSection: false,
+      hypertension: false,
+      diabetes: false,
+      gravidity: 2,
+      parity: 1,
+      multiplePregnancy: false
+    },
+    vitals: [
+      { 
+        id: 'v6', 
+        timestamp: '2024-03-20T11:00:00Z', 
+        gestationalAge: 26, 
+        systolicBP: 130,
+        diastolicBP: 80,
+        bp: '130/80', 
+        hb: 12.0, 
+        weight: 65, 
+        fetalHeartRate: 140, 
+        bloodSugar: 15.0, // HIGH RISK (Hyperglycemia)
+        riskScore: 85, 
+        dangerSigns: ['Hyperglycemia: 15.0 mmol/L'],
+        clinicalRecommendations: ['Suspected Gestational Diabetes (GDM). Refer for OGTT and specialist review.']
+      },
+    ],
+    createdBy: 'mock-user-1',
+  },
+  {
+    id: '6',
+    name: 'Ruvimbo Zivuku',
+    age: 32,
+    gestationalAge: 30,
+    riskScore: 40,
+    riskLevel: 'medium',
+    status: 'active',
+    lastVisit: '2024-03-22',
+    nextVisit: '2024-04-22',
+    location: 'Empress Mine',
+    phone: '+263 78 444 5555',
+    history: {
+      hivStatus: 'negative',
+      previousCSection: false,
+      hypertension: false,
+      diabetes: false,
+      gravidity: 1,
+      parity: 0,
+      multiplePregnancy: false
+    },
+    vitals: [
+      { 
+        id: 'v7', 
+        timestamp: '2024-03-22T09:30:00Z', 
+        gestationalAge: 30, 
+        systolicBP: 120,
+        diastolicBP: 90,
+        bp: '120/90', 
+        hb: 11.5, 
+        weight: 60, 
+        fetalHeartRate: 145, 
+        bloodSugar: 6.9, // MEDIUM RISK
+        riskScore: 40, 
+        dangerSigns: [] 
+      },
+    ],
+    createdBy: 'mock-user-1',
+  },
 ];
 
 export const MOCK_REFERRALS: Referral[] = [

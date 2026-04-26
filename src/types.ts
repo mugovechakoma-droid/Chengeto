@@ -60,6 +60,7 @@ export interface Patient {
     intraamnioticInfection?: boolean;
     cardiacDisease?: boolean;
     bloodSugar?: number;
+    placentaAccreta?: boolean;
   };
   vitals: ANCVisit[];
   delivery?: DeliveryRecord;

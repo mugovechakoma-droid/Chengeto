@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/select';
 import { Patient, ANCVisit } from '../types';
 import { cn } from '@/lib/utils';
+import { calculateMaternalRisk } from '../services/riskEngine';
 
 interface ANCVisitFormProps {
   isOpen: boolean;
@@ -137,6 +138,16 @@ export default function ANCVisitForm({ isOpen, onClose, patient, onSubmit }: ANC
     }));
   };
 
+  const currentRisk = calculateMaternalRisk(patient.history, {
+    ...formData,
+    age: patient.age,
+    hb: parseFloat(formData.hb || '12'),
+    bloodSugar: parseFloat(formData.bloodSugar || '0'),
+    systolicBP: parseInt(formData.bp.split('/')[0] || '120'),
+    diastolicBP: parseInt(formData.bp.split('/')[1] || '80'),
+    gestationalAge: patient.gestationalAge
+  } as any);
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6">
       <motion.div 
@@ -226,6 +237,8 @@ export default function ANCVisitForm({ isOpen, onClose, patient, onSubmit }: ANC
                       className="h-12 rounded-xl border-slate-200 dark:border-slate-700"
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold uppercase tracking-widest text-slate-400">Fetal Heart Rate (bpm)</Label>
                     <Input 
                       type="number"
                       placeholder="e.g. 140"
@@ -317,19 +330,19 @@ export default function ANCVisitForm({ isOpen, onClose, patient, onSubmit }: ANC
                     </div>
                     <div className="flex items-end gap-4">
                       <div className="text-4xl font-bold text-blue-900 dark:text-white">
-                        {formData.dangerSigns.length > 0 ? '85%' : '12%'}
+                        {currentRisk.riskScore}%
                       </div>
                       <div className={cn(
                         "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest",
-                        formData.dangerSigns.length > 0 ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"
+                        currentRisk.riskLevel === 'high' ? "bg-red-100 text-red-700" : 
+                        currentRisk.riskLevel === 'medium' ? "bg-amber-100 text-amber-700" : 
+                        "bg-emerald-100 text-emerald-700"
                       )}>
-                        {formData.dangerSigns.length > 0 ? 'High Risk' : 'Low Risk'}
+                        {currentRisk.riskLevel} Risk
                       </div>
                     </div>
                     <p className="text-sm text-blue-700/70 dark:text-blue-400/70">
-                      {formData.dangerSigns.length > 0 
-                        ? 'Immediate referral to District Hospital is recommended due to danger signs.'
-                        : 'Patient is stable. Continue routine ANC at clinic level.'}
+                      {currentRisk.recommendation}
                     </p>
                   </div>
 

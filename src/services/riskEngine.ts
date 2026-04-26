@@ -1,4 +1,4 @@
-import { Patient, ANCVisit } from '../types';
+import { Patient, ANCVisit, RiskLevel } from '../types';
 
 export const calculateEDD = (lnmp: string): string => {
   if (!lnmp) return '';

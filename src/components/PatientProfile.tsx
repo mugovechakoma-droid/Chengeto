@@ -18,6 +18,7 @@ import {
   ChevronRight,
   FileText,
   AlertCircle,
+  AlertTriangle,
   Clock,
   ArrowUpRight,
   TrendingUp,
