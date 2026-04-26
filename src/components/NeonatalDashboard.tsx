@@ -166,54 +166,75 @@ export default function NeonatalDashboard({ mother, neonate, onNewVisit }: Neona
            </CardContent>
         </Card>
 
-            </CardContent>
-        </Card>
-
-        <Card className={cn(
-          "rounded-3xl border-none shadow-xl transition-all duration-500",
-          riskAssessment.dischargeReadiness.isReady 
-            ? "bg-emerald-600 text-white" 
-            : "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white"
-        )}>
-           <CardHeader className="p-6 pb-2">
-              <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-widest opacity-70">
-                <ClipboardCheck className="w-4 h-4" />
-                Discharge Readiness
-              </CardTitle>
-           </CardHeader>
-           <CardContent className="p-6 space-y-4">
-              <div className="flex justify-between items-end">
-                 <div className="text-4xl font-black">{riskAssessment.dischargeReadiness.score}%</div>
-                 <div className="text-[10px] font-bold uppercase opacity-60">Readiness Score</div>
-              </div>
-              <Progress 
-                value={riskAssessment.dischargeReadiness.score} 
-                className="h-1.5 bg-black/10 dark:bg-white/10" 
-                //@ts-ignore
-                indicatorClassName={riskAssessment.dischargeReadiness.isReady ? "bg-white" : "bg-blue-600"}
-              />
-              {!riskAssessment.dischargeReadiness.isReady && (
-                <div className="space-y-1">
-                   <p className="text-[10px] font-bold uppercase opacity-60">Missing Criteria:</p>
-                   <div className="flex flex-wrap gap-1">
-                      {riskAssessment.dischargeReadiness.missingCriteria.map(c => (
-                        <Badge key={c} variant="secondary" className="bg-black/5 dark:bg-white/5 border-none text-[8px] font-bold">
-                          {c}
-                        </Badge>
-                      ))}
+        <div className="flex flex-col gap-6 lg:col-span-1">
+          <Card className="rounded-3xl border-none shadow-xl bg-gradient-to-br from-blue-600 to-blue-700 text-white overflow-hidden">
+             <CardHeader className="p-6 pb-2">
+                <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-widest opacity-70">
+                  <Wind className="w-4 h-4" />
+                  Growth Tracking
+                </CardTitle>
+             </CardHeader>
+             <CardContent className="p-6 space-y-4">
+                <div className="flex justify-between items-end">
+                   <div>
+                      <p className="text-[10px] font-bold uppercase opacity-60">Birth Weight</p>
+                      <p className="text-2xl font-black">{neonate.birthWeight} <span className="text-xs font-medium opacity-60">g</span></p>
                    </div>
+                   <Badge className="bg-white/20 text-white border-none uppercase text-[8px]">CENTILE: 50th</Badge>
                 </div>
-              )}
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleCopyHandover}
-                className="w-full mt-2 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-[10px] font-bold uppercase tracking-widest gap-2"
-              >
-                <Copy className="w-3 h-3" /> Copy Clinical Handover
-              </Button>
-           </CardContent>
-        </Card>
+                <div className="pt-2">
+                   <p className="text-[10px] font-bold uppercase opacity-60 mb-1">Length-for-Age</p>
+                   <p className="text-lg font-bold">49.5 <span className="text-xs font-medium opacity-60">cm</span></p>
+                </div>
+             </CardContent>
+          </Card>
+
+          <Card className={cn(
+            "rounded-3xl border-none shadow-xl transition-all duration-500",
+            riskAssessment.dischargeReadiness.isReady 
+              ? "bg-emerald-600 text-white" 
+              : "bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white"
+          )}>
+             <CardHeader className="p-6 pb-2">
+                <CardTitle className="text-sm font-bold flex items-center gap-2 uppercase tracking-widest opacity-70">
+                  <ClipboardCheck className="w-4 h-4" />
+                  Discharge Readiness
+                </CardTitle>
+             </CardHeader>
+             <CardContent className="p-6 space-y-4">
+                <div className="flex justify-between items-end">
+                   <div className="text-4xl font-black">{riskAssessment.dischargeReadiness.score}%</div>
+                   <div className="text-[10px] font-bold uppercase opacity-60">Readiness Score</div>
+                </div>
+                <Progress 
+                  value={riskAssessment.dischargeReadiness.score} 
+                  className="h-1.5 bg-black/10 dark:bg-white/10" 
+                  //@ts-ignore
+                  indicatorClassName={riskAssessment.dischargeReadiness.isReady ? "bg-white" : "bg-blue-600"}
+                />
+                {!riskAssessment.dischargeReadiness.isReady && (
+                  <div className="space-y-1">
+                     <p className="text-[10px] font-bold uppercase opacity-60">Missing Criteria:</p>
+                     <div className="flex flex-wrap gap-1">
+                        {riskAssessment.dischargeReadiness.missingCriteria.map(c => (
+                          <Badge key={c} variant="secondary" className="bg-black/5 dark:bg-white/5 border-none text-[8px] font-bold">
+                            {c}
+                          </Badge>
+                        ))}
+                     </div>
+                  </div>
+                )}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={handleCopyHandover}
+                  className="w-full mt-2 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-[10px] font-bold uppercase tracking-widest gap-2"
+                >
+                  <Copy className="w-3 h-3" /> Copy Clinical Handover
+                </Button>
+             </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Structured Checklists / Screening */}
