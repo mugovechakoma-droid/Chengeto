@@ -71,6 +71,12 @@ const ROLES = [
 export default function LoginPage({ onLogin, isLoading }: LoginPageProps) {
   const [language, setLanguage] = useState<'EN' | 'SN' | 'ND'>('EN');
   const [online, setOnline] = useState(true);
+  const [step, setStep] = useState<'role' | 'credentials'>('role');
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+  
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     setOnline(isOnline());
@@ -83,12 +89,21 @@ export default function LoginPage({ onLogin, isLoading }: LoginPageProps) {
     };
   }, []);
 
-  const handleRoleSelect = async (role: UserRole) => {
-    // Immediate login with role-specific dummy credentials
-    const dummyEmail = `${role}@chengeto.gov.zw`;
-    const dummyPass = 'password123';
-    await onLogin(dummyEmail, dummyPass, role);
+  const handleRoleSelect = (role: UserRole) => {
+    setSelectedRole(role);
+    setStep('credentials');
+    // Pre-fill email for demo convenience
+    setEmail(`${role}@chengeto.gov.zw`);
   };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (selectedRole) {
+      await onLogin(email, password, selectedRole);
+    }
+  };
+
+  const currentRoleData = ROLES.find(r => r.id === selectedRole);
 
   return (
     <div className="min-h-screen w-full flex bg-white dark:bg-slate-950 overflow-hidden">
@@ -148,7 +163,7 @@ export default function LoginPage({ onLogin, isLoading }: LoginPageProps) {
         </div>
       </div>
 
-      {/* Right Pane: Role Selection */}
+      {/* Right Pane: Auth Flow */}
       <div className="w-full lg:w-1/2 flex flex-col bg-slate-50/50 dark:bg-slate-900/50">
         {/* Header with Language Toggle */}
         <header className="p-6 flex justify-between items-center">
@@ -181,59 +196,152 @@ export default function LoginPage({ onLogin, isLoading }: LoginPageProps) {
         </header>
 
         <main className="flex-1 flex items-center justify-center p-6 sm:p-12">
-          <div className="w-full max-w-md space-y-8">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-6"
-            >
-              <div className="space-y-3">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 text-[10px] font-bold uppercase tracking-widest">
-                   System Access
-                </div>
-                <h2 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">Select Portal</h2>
-                <p className="text-slate-500 dark:text-slate-400 font-medium">Choose your clinical role to enter the secure dashboard.</p>
-              </div>
+          <div className="w-full max-w-md">
+            <AnimatePresence mode="wait">
+              {step === 'role' ? (
+                <motion.div
+                  key="role-selection"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  className="space-y-8"
+                >
+                  <div className="space-y-3">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 text-[10px] font-bold uppercase tracking-widest">
+                       Clinical Gateway
+                    </div>
+                    <h2 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white">Select Portal</h2>
+                    <p className="text-slate-500 dark:text-slate-400 font-medium">Choose your clinical role to enter the secure dashboard.</p>
+                  </div>
 
-              <div className="grid grid-cols-1 gap-4">
-                {ROLES.map((role) => (
-                  <button
-                    key={role.id}
-                    disabled={isLoading}
-                    onClick={() => handleRoleSelect(role.id)}
-                    className={cn(
-                      "flex items-center gap-5 p-5 rounded-3xl border bg-white dark:bg-slate-800 text-left transition-all duration-300 group relative overflow-hidden",
-                      "border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-xl hover:shadow-blue-500/10",
-                      "active:scale-[0.98]",
-                      isLoading && "opacity-50 cursor-not-allowed"
-                    )}
+                  <div className="grid grid-cols-1 gap-4">
+                    {ROLES.map((role) => (
+                      <button
+                        key={role.id}
+                        disabled={isLoading}
+                        onClick={() => handleRoleSelect(role.id)}
+                        className={cn(
+                          "flex items-center gap-5 p-5 rounded-3xl border bg-white dark:bg-slate-800 text-left transition-all duration-300 group relative overflow-hidden",
+                          "border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-xl hover:shadow-blue-500/10",
+                          "active:scale-[0.98]",
+                          isLoading && "opacity-50 cursor-not-allowed"
+                        )}
+                      >
+                        <div className={cn(
+                          "w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110",
+                          role.bg, 
+                          "dark:bg-opacity-20"
+                        )}>
+                          <role.icon className={cn("w-7 h-7", role.color)} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-slate-900 dark:text-white text-base">{role.title}</h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">{role.description}</p>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-slate-300 dark:text-slate-600 group-hover:text-blue-500 transition-colors" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/5 to-blue-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="credential-entry"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="space-y-8"
+                >
+                  <button 
+                    onClick={() => setStep('role')}
+                    className="flex items-center gap-2 text-slate-400 hover:text-blue-600 transition-colors text-xs font-bold uppercase tracking-widest"
                   >
-                    <div className={cn(
-                      "w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110",
-                      role.bg, 
-                      "dark:bg-opacity-20"
-                    )}>
-                      <role.icon className={cn("w-7 h-7", role.color)} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-slate-900 dark:text-white text-base">{role.title}</h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">{role.description}</p>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-slate-300 dark:text-slate-600 group-hover:text-blue-500 transition-colors" />
-                    
-                    {/* Hover Glow Effect */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/5 to-blue-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                    <ArrowLeft className="w-4 h-4" />
+                    Back to Portals
                   </button>
-                ))}
-              </div>
 
-              {isLoading && (
-                <div className="flex items-center justify-center gap-3 text-blue-600 dark:text-blue-400 font-bold text-xs uppercase tracking-widest pt-4">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Securing Clinical Session...
-                </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", currentRoleData?.bg)}>
+                        <currentRoleData.icon className={cn("w-5 h-5", currentRoleData?.color)} />
+                      </div>
+                      <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                        {currentRoleData?.title} Login
+                      </h2>
+                    </div>
+                    <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">Enter your credentials to access the secure portal.</p>
+                  </div>
+
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Work Email</Label>
+                        <div className="relative">
+                          <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <Input 
+                            id="email"
+                            type="email"
+                            placeholder="name@chengeto.gov.zw"
+                            className="h-14 pl-12 rounded-2xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 focus:ring-blue-500"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Password</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <Input 
+                            id="password"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="••••••••"
+                            className="h-14 pl-12 pr-12 rounded-2xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 focus:ring-blue-500"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                          >
+                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between px-1">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox id="remember" className="rounded-md border-slate-300" />
+                        <label htmlFor="remember" className="text-[10px] font-bold text-slate-500 uppercase tracking-widest cursor-pointer">Remember Me</label>
+                      </div>
+                      <button type="button" className="text-[10px] font-bold text-blue-600 uppercase tracking-widest hover:underline">Forgot Password?</button>
+                    </div>
+
+                    <Button 
+                      type="submit" 
+                      disabled={isLoading}
+                      className="w-full h-14 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-xl shadow-blue-500/20 transition-all active:scale-[0.98]"
+                    >
+                      {isLoading ? (
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Authenticating...
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          Sign In to Dashboard <ChevronRight className="w-4 h-4" />
+                        </div>
+                      )}
+                    </Button>
+                  </form>
+                </motion.div>
               )}
-            </motion.div>
+            </AnimatePresence>
           </div>
         </main>
 
