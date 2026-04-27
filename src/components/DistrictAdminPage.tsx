@@ -39,8 +39,12 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
+import { useFirebase } from '../contexts/FirebaseContext';
+import { seedPatients } from '../lib/firebase';
+import { toast } from 'sonner';
 
 const MOCK_FACILITIES = [
+// ... (rest of the file)
   { name: 'Murehwa District Hospital', type: 'District', status: 'Online', reporting: 100, patients: 450, staff: '124', riskSaturation: 12, color: 'text-blue-600', bg: 'bg-blue-50' },
   { name: 'Zumba Rural Clinic', type: 'Clinic', status: 'Online', reporting: 94, patients: 120, staff: '12', riskSaturation: 45, color: 'text-emerald-600', bg: 'bg-emerald-50' },
   { name: 'Murehwa North Post', type: 'Post', status: 'Offline', reporting: 0, patients: 45, staff: '2', riskSaturation: 0, color: 'text-slate-400', bg: 'bg-slate-100' },
@@ -64,6 +68,21 @@ const MOCK_KPI_DATA = [
 
 const DistrictAdminPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const { profile, user } = useFirebase();
+  const [isSeeding, setIsSeeding] = useState(false);
+
+  const handleSeed = async () => {
+    if (!user) return;
+    setIsSeeding(true);
+    try {
+      await seedPatients(user.uid);
+      toast.success('Firebase seeded with clinical dataset');
+    } catch (error) {
+      toast.error('Failed to seed database');
+    } finally {
+      setIsSeeding(false);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-8 pb-12">
@@ -74,6 +93,18 @@ const DistrictAdminPage: React.FC = () => {
           <p className="text-sm text-muted-foreground">Governance and resource orchestration for Gokwe North.</p>
         </div>
         <div className="flex items-center gap-2">
+          {profile?.role === 'admin' && (
+            <Button 
+              onClick={handleSeed}
+              variant="outline" 
+              size="sm" 
+              disabled={isSeeding}
+              className="rounded-xl h-9 border-amber-200 text-amber-700 hover:bg-amber-50"
+            >
+              <Zap className={cn("w-4 h-4 mr-2", isSeeding && "animate-pulse")} />
+              {isSeeding ? 'Seeding...' : 'Seed Database'}
+            </Button>
+          )}
           <Button variant="outline" size="sm" className="rounded-xl h-9">
             <Download className="w-4 h-4 mr-2" />
             District Report

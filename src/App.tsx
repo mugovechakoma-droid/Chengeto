@@ -35,7 +35,7 @@ import { MOCK_PATIENTS, MOCK_REFERRALS } from './constants';
 import { RiskLevel } from './types';
 
 export default function App() {
-  const { user, loading, isMock, loginWithEmail, logout } = useFirebase();
+  const { user, loading, isMock, loginWithEmail, loginWithGoogle, logout } = useFirebase();
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isAssessmentOpen, setIsAssessmentOpen] = useState(false);
@@ -425,6 +425,18 @@ export default function App() {
     }
   };
 
+  const handleGoogleLogin = async (role: UserRole) => {
+    setIsAuthLoading(true);
+    try {
+      await login(role);
+      toast.success('Welcome back');
+    } catch (error: any) {
+      toast.error('Google login failed', { description: error.message });
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
 
   const handleMarkAsRead = async (id: string) => {
     try {
@@ -456,6 +468,7 @@ export default function App() {
           <PublicRoute>
             <LoginPage 
               onLogin={handleEmailLogin} 
+              onGoogleLogin={handleGoogleLogin}
               isLoading={isAuthLoading} 
             />
           </PublicRoute>
