@@ -35,7 +35,7 @@ import { MOCK_PATIENTS, MOCK_REFERRALS } from './constants';
 import { RiskLevel } from './types';
 
 export default function App() {
-  const { user, loading, isMock, loginWithEmail, loginWithGoogle, logout } = useFirebase();
+  const { user, loading, isMock, loginWithEmail, login, logout } = useFirebase();
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isAssessmentOpen, setIsAssessmentOpen] = useState(false);

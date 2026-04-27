@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Stethoscope, 
@@ -25,6 +25,7 @@ import { isOnline } from '../../lib/firebase';
 
 interface LoginPageProps {
   onLogin: (email: string, pass: string, role: UserRole) => Promise<void>;
+  onGoogleLogin: (role: UserRole) => Promise<void>;
   isLoading: boolean;
 }
 
