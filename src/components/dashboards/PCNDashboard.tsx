@@ -75,6 +75,11 @@ export default function PCNDashboard({
     return matchesSearch && matchesRisk;
   });
 
+  const priorityPatients = patients
+    .filter(p => p.riskLevel === 'high' || p.vitals?.some(v => v.dangerSigns?.length > 0))
+    .sort((a, b) => (b.riskScore || 0) - (a.riskScore || 0))
+    .slice(0, 3);
+
   const handleSeedData = async () => {
     if (!auth.currentUser) return;
     setIsSeeding(true);
@@ -296,31 +301,45 @@ export default function PCNDashboard({
               </div>
            </div>
 
-           {/* Upcoming Tasks */}
-           <div className="mac-card p-6 border-none bg-emerald-50 dark:bg-emerald-900/10 rounded-[32px] space-y-4">
-              <h4 className="text-xs font-black uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
-                <Calendar className="w-3 h-3" />
-                Priority Tasks
-              </h4>
-              <div className="space-y-3">
-                 {[
-                   { label: 'Sarah Moyo (ANC)', time: 'Overdue', urgency: 'high' },
-                   { label: 'Update Stock Levels', time: 'Today', urgency: 'medium' },
-                   { label: 'Referral Follow-up', time: 'Tomorrow', urgency: 'low' }
-                 ].map(task => (
-                   <div key={task.label} className="p-3 rounded-2xl bg-white dark:bg-slate-900 shadow-xs flex items-center justify-between group cursor-pointer hover:border-emerald-200 border border-transparent transition-all">
-                      <div>
-                        <p className="text-xs font-bold text-slate-900 dark:text-white">{task.label}</p>
-                        <p className={cn(
-                          "text-[9px] font-bold uppercase",
-                          task.urgency === 'high' ? 'text-red-500' : 'text-slate-400'
-                        )}>{task.time}</p>
-                      </div>
-                      <ArrowRight className="w-3 h-3 text-slate-300 group-hover:text-emerald-500 transition-colors" />
-                   </div>
-                 ))}
-              </div>
-           </div>
+            {/* Smart Triage */}
+            <div className="mac-card p-6 border-none bg-emerald-50 dark:bg-emerald-900/10 rounded-[32px] space-y-4">
+               <h4 className="text-xs font-black uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                 <Calendar className="w-3 h-3" />
+                 Smart Triage (Urgent)
+               </h4>
+               <div className="space-y-3">
+                  {priorityPatients.length > 0 ? priorityPatients.map(patient => (
+                    <div 
+                      key={patient.id} 
+                      onClick={() => onPatientClick(patient)}
+                      className="p-3 rounded-2xl bg-white dark:bg-slate-900 shadow-xs flex items-center justify-between group cursor-pointer hover:border-red-200 border border-transparent transition-all"
+                    >
+                       <div className="flex items-center gap-3">
+                          <div className={cn(
+                            "w-2 h-2 rounded-full",
+                            patient.riskLevel === 'high' ? "bg-red-500 animate-pulse" : "bg-amber-500"
+                          )} />
+                          <div>
+                            <p className="text-xs font-bold text-slate-900 dark:text-white">{patient.name}</p>
+                            <p className="text-[9px] font-bold uppercase text-slate-400">
+                               {patient.riskLevel} Risk • {patient.vitals?.[patient.vitals.length-1]?.dangerSigns?.[0] || 'High Score'}
+                            </p>
+                          </div>
+                       </div>
+                       <ArrowRight className="w-3 h-3 text-slate-300 group-hover:text-red-500 transition-colors" />
+                    </div>
+                  )) : (
+                    <div className="py-4 text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">
+                       No urgent triage required
+                    </div>
+                  )}
+               </div>
+               {patients.length > 0 && (
+                 <Button variant="ghost" size="sm" className="w-full text-[9px] font-black uppercase tracking-tighter text-emerald-600 dark:text-emerald-400">
+                    View Full Clinical Queue
+                 </Button>
+               )}
+            </div>
 
            <div className="mac-card p-6 border-none bg-slate-50 dark:bg-white/5 rounded-[32px] space-y-4">
               <h4 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Resource Status</h4>

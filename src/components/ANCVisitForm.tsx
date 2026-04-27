@@ -9,11 +9,13 @@ import {
   AlertTriangle,
   CheckCircle2,
   Save,
-  Loader2
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Select, 
@@ -164,6 +166,26 @@ export default function ANCVisitForm({ isOpen, onClose, patient, onSubmit }: ANC
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
       >
+        {/* History Snapshot Bar */}
+        <div className="px-6 py-2 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-4 shrink-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Last Hb:</span>
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{patient.vitals?.[patient.vitals.length-1]?.hb || 'N/A'}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Last BP:</span>
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{patient.vitals?.[patient.vitals.length-1]?.bp || 'N/A'}</span>
+            </div>
+          </div>
+          <Badge className={cn(
+            "text-[7px] font-black uppercase tracking-tighter",
+            patient.riskLevel === 'high' ? "bg-red-500" : patient.riskLevel === 'medium' ? "bg-amber-500" : "bg-emerald-500"
+          )}>
+            Prev: {patient.riskLevel}
+          </Badge>
+        </div>
+
         {/* Header */}
         <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
           <div className="flex items-center gap-4">
@@ -368,6 +390,21 @@ export default function ANCVisitForm({ isOpen, onClose, patient, onSubmit }: ANC
             </motion.div>
           </AnimatePresence>
         </div>
+
+        {/* Real-time Alert Banner */}
+        {currentRisk.riskScore > 30 && currentStep === 0 && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            className="px-8 py-3 bg-red-50 dark:bg-red-900/20 border-t border-red-100 dark:border-red-900/30 flex items-center gap-3"
+          >
+            <AlertCircle className="w-4 h-4 text-red-600 shrink-0 animate-pulse" />
+            <p className="text-[11px] font-bold text-red-700 dark:text-red-400">
+               <span className="uppercase tracking-widest mr-2">Clinical Warning:</span>
+               Current vitals suggest {currentRisk.riskLevel.toUpperCase()} RISK ({currentRisk.riskScore}%). {currentRisk.recommendation}
+            </p>
+          </motion.div>
+        )}
 
         {/* Footer */}
         <div className="p-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
