@@ -24,6 +24,7 @@ import { Patient, Referral } from '../types';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { analyzeReferralReason } from '../services/aiService';
 
 interface ReferralFormProps {
   isOpen: boolean;
@@ -55,6 +56,7 @@ const REASONS = [
 
 export default function ReferralForm({ isOpen, onClose, patient, onSubmit }: ReferralFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [formData, setFormData] = useState({
     toHospital: '',
     reason: '',
@@ -63,61 +65,86 @@ export default function ReferralForm({ isOpen, onClose, patient, onSubmit }: Ref
   });
 
   useEffect(() => {
-    if (isOpen && patient) {
-      const latestVisit = patient.vitals && patient.vitals.length > 0 
-        ? patient.vitals[patient.vitals.length - 1] 
-        : null;
+    let isMounted = true;
+    
+    const analyzeData = async () => {
+      if (isOpen && patient) {
+        setIsAnalyzing(true);
+        const latestVisit = patient.vitals && patient.vitals.length > 0 
+          ? patient.vitals[patient.vitals.length - 1] 
+          : null;
 
-      let summary = `CLINICAL SUMMARY for ${patient.name}:\n`;
-      summary += `• Gestational Age: ${patient.gestationalAge} Weeks\n`;
-      
-      if (latestVisit) {
-        summary += `• Vitals: BP ${latestVisit.bp || `${latestVisit.systolicBP}/${latestVisit.diastolicBP}`}, HR ${latestVisit.heartRate || '--'} bpm, Hb ${latestVisit.hb || '--'} g/dL\n`;
-        
-        if (latestVisit.dangerSigns && latestVisit.dangerSigns.length > 0) {
-          summary += `• Danger Signs: ${latestVisit.dangerSigns.join(', ')}\n`;
+        // Fallback summary
+        let fallbackSummary = `CLINICAL SUMMARY for ${patient.name}:\n`;
+        fallbackSummary += `• Gestational Age: ${patient.gestationalAge} Weeks\n`;
+        if (latestVisit) {
+          fallbackSummary += `• Vitals: BP ${latestVisit.bp || `${latestVisit.systolicBP}/${latestVisit.diastolicBP}`}, HR ${latestVisit.heartRate || '--'} bpm, Hb ${latestVisit.hb || '--'} g/dL\n`;
+          if (latestVisit.dangerSigns && latestVisit.dangerSigns.length > 0) {
+            fallbackSummary += `• Danger Signs: ${latestVisit.dangerSigns.join(', ')}\n`;
+          }
+          if (latestVisit.clinicalRecommendations && latestVisit.clinicalRecommendations.length > 0) {
+            fallbackSummary += `• Recommendations Initiated: ${latestVisit.clinicalRecommendations.join('; ')}\n`;
+          }
         }
+
+        // Call Gemini AI
+        const aiResult = await analyzeReferralReason(patient, REASONS);
         
-        if (latestVisit.clinicalRecommendations && latestVisit.clinicalRecommendations.length > 0) {
-          summary += `• Recommendations Initiated: ${latestVisit.clinicalRecommendations.join('; ')}\n`;
+        if (!isMounted) return;
+
+        if (aiResult) {
+          setFormData(prev => ({
+            ...prev,
+            toHospital: 'Gokwe North District Hospital',
+            reason: aiResult.reason,
+            urgency: aiResult.urgency,
+            notes: aiResult.clinicalSummary
+          }));
+        } else {
+          // Fallback heuristic if AI fails
+          let autoselectedReason = '';
+          const dangerSigns = latestVisit?.dangerSigns || [];
+          const hasRedFlag = (text: string) => dangerSigns.some(ds => ds.toLowerCase().includes(text.toLowerCase()));
+
+          if (hasRedFlag('eclampsia') || hasRedFlag('active convulsions')) {
+            autoselectedReason = 'Eclampsia (Imminent/Active)';
+          } else if (hasRedFlag('preeclampsia') || hasRedFlag('headache') || hasRedFlag('vision') || 
+              (latestVisit?.systolicBP && latestVisit.systolicBP > 160) || 
+              (latestVisit?.diastolicBP && latestVisit.diastolicBP > 110)) {
+            autoselectedReason = 'Hypertensive Crisis / Preeclampsia';
+          } else if (hasRedFlag('bleeding') || hasRedFlag('hemorrhage') || (latestVisit?.bloodLoss && latestVisit.bloodLoss > 500)) {
+            autoselectedReason = latestVisit?.bloodLoss && latestVisit.bloodLoss > 500 ? 'Post-Partum Haemorrhage (PPH)' : 'Antepartum Hemorrhage (APH)';
+          } else if (hasRedFlag('sepsis') || (latestVisit?.temperature && latestVisit.temperature > 37.5)) {
+            autoselectedReason = 'Obstetric Sepsis';
+          } else if (latestVisit?.hb && latestVisit.hb < 7) {
+            autoselectedReason = 'Severe Anemia (Hb < 7)';
+          } else if (patient.history?.previousCSection) {
+            autoselectedReason = 'Previous C-Section with Complications';
+          } else if (patient.history?.sickleCell) {
+            autoselectedReason = 'Sickle Cell Crisis';
+          } else if (hasRedFlag('heart rate') || hasRedFlag('fetal')) {
+            autoselectedReason = 'Fetal Distress / Abnormal Heart Rate';
+          } else if (hasRedFlag('obstructed') || hasRedFlag('cpd')) {
+            autoselectedReason = 'Obstructed Labor / Malpresentation';
+          }
+
+          setFormData(prev => ({
+            ...prev,
+            toHospital: 'Gokwe North District Hospital',
+            reason: autoselectedReason || prev.reason,
+            urgency: patient.riskLevel === 'high' ? 'emergency' : 'urgent',
+            notes: fallbackSummary
+          }));
         }
+        setIsAnalyzing(false);
       }
-
-      // Auto-determine reason based on red flags, vitals and history
-      let autoselectedReason = '';
-      const dangerSigns = latestVisit?.dangerSigns || [];
-      const hasRedFlag = (text: string) => dangerSigns.some(ds => ds.toLowerCase().includes(text.toLowerCase()));
-
-      if (hasRedFlag('eclampsia') || hasRedFlag('active convulsions')) {
-        autoselectedReason = 'Eclampsia (Imminent/Active)';
-      } else if (hasRedFlag('preeclampsia') || hasRedFlag('headache') || hasRedFlag('vision') || 
-          (latestVisit?.systolicBP && latestVisit.systolicBP > 160) || 
-          (latestVisit?.diastolicBP && latestVisit.diastolicBP > 110)) {
-        autoselectedReason = 'Hypertensive Crisis / Preeclampsia';
-      } else if (hasRedFlag('bleeding') || hasRedFlag('hemorrhage') || (latestVisit?.bloodLoss && latestVisit.bloodLoss > 500)) {
-        autoselectedReason = latestVisit?.bloodLoss && latestVisit.bloodLoss > 500 ? 'Post-Partum Haemorrhage (PPH)' : 'Antepartum Hemorrhage (APH)';
-      } else if (hasRedFlag('sepsis') || (latestVisit?.temperature && latestVisit.temperature > 37.5)) {
-        autoselectedReason = 'Obstetric Sepsis';
-      } else if (latestVisit?.hb && latestVisit.hb < 7) {
-        autoselectedReason = 'Severe Anemia (Hb < 7)';
-      } else if (patient.history?.previousCSection) {
-        autoselectedReason = 'Previous C-Section with Complications';
-      } else if (patient.history?.sickleCell) {
-        autoselectedReason = 'Sickle Cell Crisis';
-      } else if (hasRedFlag('heart rate') || hasRedFlag('fetal')) {
-        autoselectedReason = 'Fetal Distress / Abnormal Heart Rate';
-      } else if (hasRedFlag('obstructed') || hasRedFlag('cpd')) {
-        autoselectedReason = 'Obstructed Labor / Malpresentation';
-      }
-
-      setFormData(prev => ({
-        ...prev,
-        notes: summary,
-        toHospital: 'Gokwe North District Hospital',
-        reason: autoselectedReason || prev.reason,
-        urgency: patient.riskLevel === 'high' ? 'emergency' : 'urgent'
-      }));
-    }
+    };
+    
+    analyzeData();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [isOpen, patient]);
 
   if (!isOpen || !patient) return null;
@@ -228,7 +255,14 @@ export default function ReferralForm({ isOpen, onClose, patient, onSubmit }: Ref
               </div>
             )}
 
-            <div className="space-y-4">
+            {isAnalyzing && (
+              <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 flex items-center justify-center gap-3">
+                <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                <span className="text-sm font-bold text-blue-600">Gemini AI is analyzing clinical data...</span>
+              </div>
+            )}
+
+            <div className={cn("space-y-4", isAnalyzing && "opacity-50 pointer-events-none")}>
             <div className="space-y-2">
               <Label className="text-xs font-bold uppercase tracking-widest text-slate-400">Receiving Facility</Label>
               <Select 
